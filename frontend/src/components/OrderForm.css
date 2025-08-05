@@ -1,0 +1,346 @@
+.order-form-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background: #f8f9fa;
+  min-height: 100vh;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #666;
+}
+
+/* Portfolio Summary */
+.portfolio-summary {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.summary-card h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 8px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.summary-row:last-child {
+  border-bottom: none;
+}
+
+.cash-amount, .portfolio-amount, .total-amount {
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+.cash-amount {
+  color: #28a745;
+}
+
+.portfolio-amount {
+  color: #007bff;
+}
+
+.total-amount {
+  color: #6f42c1;
+}
+
+.return-amount.positive {
+  color: #28a745;
+}
+
+.return-amount.negative {
+  color: #dc3545;
+}
+
+.cash-amount, .portfolio-amount {
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+/* Stock Information */
+.stock-info {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stock-info h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+}
+
+.stock-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.price-change.positive {
+  color: #059669;
+}
+
+.price-change.negative {
+  color: #dc2626;
+}
+
+.holding-info {
+  grid-column: span 2;
+  background: #e0f2fe;
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
+
+/* Order History Section */
+.order-history-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-top: 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.toggle-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.toggle-btn:hover {
+  background: #0056b3;
+}
+
+/* Orders Table */
+.orders-table {
+  width: 100%;
+}
+
+.table-header,
+.table-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  gap: 15px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.table-header {
+  font-weight: bold;
+  background: #f8f9fa;
+  padding: 15px 0;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.table-row:hover {
+  background: #f8f9fa;
+}
+
+.side-buy {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.side-sell {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.status-filled {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.status-rejected {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.status-pending {
+  color: #ffc107;
+  font-weight: bold;
+}
+
+.no-orders {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-style: italic;
+}
+
+.positive {
+  color: #28a745;
+}
+
+.negative {
+  color: #dc3545;
+}
+
+.neutral {
+  color: #6c757d;
+}
+
+.order-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-row label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #374151;
+}
+
+.form-row input, .form-row select {
+  padding: 0.75rem;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.form-row input:focus, .form-row select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.readonly-input {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.form-row small {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.order-summary {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.order-summary h4 {
+  margin: 0 0 0.75rem 0;
+  color: #374151;
+}
+
+.summary-line {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.summary-line.total {
+  font-weight: bold;
+  border-top: 1px solid #d1d5db;
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.order-btn {
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: all 0.2s;
+}
+
+.order-btn.buy-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.order-btn.sell-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.order-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.order-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.order-message {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.order-message.success {
+  background: #d1fae5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.order-message.error {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+@media (max-width: 768px) {
+  .order-form-container {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+  
+  .portfolio-summary {
+    grid-template-columns: 1fr;
+  }
+  
+  .stock-details {
+    grid-template-columns: 1fr;
+  }
+}
