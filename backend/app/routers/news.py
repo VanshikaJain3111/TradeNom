@@ -5,7 +5,7 @@ from typing import Optional
 
 router = APIRouter()
 
-NEWS_DIR = "/Users/divyanshi/Desktop/TradeNom/data/simulation_news_data_July_1-Aug_30"
+NEWS_DIR = "d:\\Projects\\ProjectTrade-main\\ProjectTrade-main\\data\\simulation_news_data_July_1-Aug_30"
 NEWS_FILES = ["simulated_July_news_2025.json", "simulated_August_news_2025.json"]
 
 @router.get("/news")

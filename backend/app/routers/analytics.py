@@ -9,8 +9,7 @@ from datetime import datetime
 router = APIRouter()
 
 # Data directory for price data
-DATA_DIR = Path("d:/Projects/ProjectTrade-main/ProjectTrade-main/data/simulation_price_data_July_1-Aug_30")
-
+DATA_DIR = Path(r"D:\Projects\ProjectTrade-main\ProjectTrade-main\data\simulation_price_data_July_1-Aug_30")
 def load_stock_data(symbol: str) -> pd.DataFrame:
     """Load stock data from CSV"""
     try:

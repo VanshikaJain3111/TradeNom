@@ -1,79 +1,133 @@
-import React, { useEffect, useState } from 'react';
-import api from '../services/api';
-import './OrderForm.css';
+import React, { useEffect, useState, useRef } from "react";
+import api from "../services/api";
+import syntheticDataService from "../services/syntheticDataService";
+import "./OrderForm.css";
 
 function OrderForm() {
   const [stocks, setStocks] = useState([]);
-  const [portfolio, setPortfolio] = useState({ cash: 0, holdings: [], total_value: 0 });
-  const [symbol, setSymbol] = useState('');
-  const [side, setSide] = useState('buy');
+  const [portfolio, setPortfolio] = useState({
+    cash: 0,
+    holdings: [],
+    total_value: 0,
+  });
+  const [symbol, setSymbol] = useState("");
+  const [side, setSide] = useState("buy");
   const [quantity, setQuantity] = useState(1);
   const [price, setPrice] = useState(0);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
-  const [orderType, setOrderType] = useState('market'); // market or limit
+  const [orderType, setOrderType] = useState("market"); // market or limit
   const [estimatedCost, setEstimatedCost] = useState(0);
   const [orderHistory, setOrderHistory] = useState([]);
   const [showOrderHistory, setShowOrderHistory] = useState(false);
+  const [currentPrices, setCurrentPrices] = useState([]);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
+  const priceUpdateUnsubscribe = useRef(null);
 
-  const user = JSON.parse(localStorage.getItem('user'));
+  const user = JSON.parse(localStorage.getItem("user"));
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [stocksRes, portfolioRes, ordersRes] = await Promise.all([
-          api.get('/trading/stocks'),
-          api.get(`/trading/portfolio/user/${user.id}`),
-          api.get(`/trading/orders/user/${user.id}`)
+        // Initialize synthetic data service
+        await syntheticDataService.initialize();
+
+        const [portfolioRes, ordersRes] = await Promise.all([
+          api.get(`/portfolio/user/${user.id}`),
+          api.get(`/orders/user/${user.id}`),
         ]);
-        setStocks(stocksRes.data);
+
+        // Get stocks from synthetic data service
+        const stockList = syntheticDataService.getStockList();
+        const currentPricesList = syntheticDataService.getAllCurrentPrices();
+
+        setStocks(stockList);
+        setCurrentPrices(currentPricesList);
         setPortfolio(portfolioRes.data);
-        setOrderHistory(ordersRes.data.orders || []);
-        if (stocksRes.data.length > 0) {
-          setSymbol(stocksRes.data[0].symbol);
-          setPrice(stocksRes.data[0].price);
+        setOrderHistory(ordersRes.data || []);
+
+        if (stockList.length > 0) {
+          setSymbol(stockList[0].symbol);
+          const firstStockPrice = currentPricesList.find(
+            (p) => p.symbol === stockList[0].symbol
+          );
+          setPrice(firstStockPrice?.price || stockList[0].price);
         }
         setLoading(false);
       } catch (err) {
-        setMessage('Failed to load stocks or portfolio');
+        console.error("Error fetching data:", err);
+        setMessage("Failed to load data");
         setLoading(false);
       }
     }
+
     fetchData();
+
+    // Subscribe to price updates
+    priceUpdateUnsubscribe.current = syntheticDataService.onPriceUpdate(
+      (prices) => {
+        setCurrentPrices(prices);
+        setLastUpdate(Date.now());
+
+        // Update current stock price if it's the selected symbol
+        const currentStock = prices.find((p) => p.symbol === symbol);
+        if (currentStock && orderType === "market") {
+          setPrice(currentStock.price);
+        }
+
+        // Refresh portfolio with new prices
+        refreshPortfolio();
+      }
+    );
+
+    return () => {
+      if (priceUpdateUnsubscribe.current) {
+        priceUpdateUnsubscribe.current();
+      }
+    };
   }, [user.id]);
+
+  const refreshPortfolio = async () => {
+    try {
+      const portfolioRes = await api.get(`/portfolio/user/${user.id}`);
+      setPortfolio(portfolioRes.data);
+    } catch (err) {
+      console.error("Error refreshing portfolio:", err);
+    }
+  };
 
   useEffect(() => {
     // Update price when symbol changes
-    const stock = stocks.find(s => s.symbol === symbol);
-    if (stock) {
-      setPrice(stock.price);
+    const currentPrice = currentPrices.find((p) => p.symbol === symbol);
+    if (currentPrice && orderType === "market") {
+      setPrice(currentPrice.price);
     }
-  }, [symbol, stocks]);
+  }, [symbol, currentPrices, orderType]);
 
   useEffect(() => {
     // Calculate estimated cost
-    if (orderType === 'market') {
-      const stock = stocks.find(s => s.symbol === symbol);
-      if (stock) {
-        setEstimatedCost(quantity * stock.price);
-      }
+    const currentPrice = currentPrices.find((p) => p.symbol === symbol);
+    const realTimePrice = currentPrice ? currentPrice.price : price;
+
+    if (orderType === "market") {
+      setEstimatedCost(quantity * realTimePrice);
     } else {
       setEstimatedCost(quantity * price);
     }
-  }, [quantity, price, orderType, symbol, stocks]);
+  }, [quantity, price, orderType, symbol, currentPrices]);
 
   const getHoldingQty = (sym) => {
-    const holding = portfolio.holdings.find(h => h.symbol === sym);
+    const holding = portfolio.holdings.find((h) => h.symbol === sym);
     return holding ? holding.quantity : 0;
   };
 
   const getCurrentValue = (sym) => {
-    const holding = portfolio.holdings.find(h => h.symbol === sym);
+    const holding = portfolio.holdings.find((h) => h.symbol === sym);
     return holding ? holding.market_value : 0;
   };
 
   const getUnrealizedPnL = (sym) => {
-    const holding = portfolio.holdings.find(h => h.symbol === sym);
+    const holding = portfolio.holdings.find((h) => h.symbol === sym);
     return holding ? holding.unrealized_pnl : 0;
   };
 
@@ -82,15 +136,19 @@ function OrderForm() {
       return "Please select a valid symbol and quantity";
     }
 
-    if (side === 'buy' && estimatedCost > portfolio.cash) {
-      return `Insufficient cash. Need $${estimatedCost.toFixed(2)}, have $${portfolio.cash.toFixed(2)}`;
+    if (side === "buy" && estimatedCost > portfolio.cash) {
+      return `Insufficient cash. Need $${estimatedCost.toFixed(
+        2
+      )}, have $${portfolio.cash.toFixed(2)}`;
     }
 
-    if (side === 'sell' && quantity > getHoldingQty(symbol)) {
-      return `Not enough shares to sell. Have ${getHoldingQty(symbol)}, trying to sell ${quantity}`;
+    if (side === "sell" && quantity > getHoldingQty(symbol)) {
+      return `Not enough shares to sell. Have ${getHoldingQty(
+        symbol
+      )}, trying to sell ${quantity}`;
     }
 
-    if (orderType === 'limit' && (!price || price <= 0)) {
+    if (orderType === "limit" && (!price || price <= 0)) {
       return "Limit orders must have a positive price";
     }
 
@@ -99,8 +157,8 @@ function OrderForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage('');
-    
+    setMessage("");
+
     const validation = validateOrder();
     if (validation) {
       setMessage(validation);
@@ -113,36 +171,36 @@ function OrderForm() {
         symbol,
         side,
         quantity: parseFloat(quantity),
-        order_type: orderType
+        order_type: orderType,
       };
 
       // Add price for limit orders
-      if (orderType === 'limit') {
+      if (orderType === "limit") {
         orderData.price = parseFloat(price);
       }
 
-      const response = await api.post('/trading/orders', orderData);
-      
+      const response = await api.post("/orders", orderData);
+
       setMessage(
         `Order executed successfully! ` +
-        `${side.toUpperCase()} ${quantity} ${symbol} at $${response.data.executed_price.toFixed(2)} ` +
-        `(Total: $${response.data.total_amount.toFixed(2)}) ` +
-        `[Execution time: ${response.data.execution_time_ms?.toFixed(1) || 'N/A'}ms]`
+          `${side.toUpperCase()} ${quantity} ${symbol} at $${response.data.price.toFixed(
+            2
+          )} ` +
+          `(Total: $${response.data.total_value.toFixed(2)})`
       );
-      
+
       // Reset form
       setQuantity(1);
-      
+
       // Refresh portfolio and order history
       const [portfolioRes, ordersRes] = await Promise.all([
-        api.get(`/trading/portfolio/user/${user.id}`),
-        api.get(`/trading/orders/user/${user.id}`)
+        api.get(`/portfolio/user/${user.id}`),
+        api.get(`/orders/user/${user.id}`),
       ]);
       setPortfolio(portfolioRes.data);
-      setOrderHistory(ordersRes.data.orders || []);
-      
+      setOrderHistory(ordersRes.data || []);
     } catch (err) {
-      const errorMsg = err.response?.data?.detail || 'Order failed';
+      const errorMsg = err.message || "Order failed";
       setMessage(errorMsg);
     }
   };
@@ -152,7 +210,20 @@ function OrderForm() {
   };
 
   const getStock = (sym) => {
-    return stocks.find(s => s.symbol === sym);
+    const stock = stocks.find((s) => s.symbol === sym);
+    const currentPrice = currentPrices.find((p) => p.symbol === sym);
+
+    if (stock && currentPrice) {
+      return {
+        ...stock,
+        price: currentPrice.price,
+        change: currentPrice.change,
+        change_percent: currentPrice.change_percent,
+        volume: currentPrice.volume,
+        lastUpdate: currentPrice.lastUpdate,
+      };
+    }
+    return stock;
   };
 
   const formatDateTime = (dateString) => {
@@ -168,28 +239,44 @@ function OrderForm() {
 
   return (
     <div className="order-form-container">
-      <h2>Place Order</h2>
-      
+      <h2>
+        Place Order
+        <span className="last-update">
+          Last Update: {new Date(lastUpdate).toLocaleTimeString()}
+        </span>
+      </h2>
+
       {/* Portfolio Summary */}
       <div className="portfolio-summary">
         <div className="summary-card">
           <h3>Portfolio Overview</h3>
           <div className="summary-row">
             <span>Available Cash:</span>
-            <span className="cash-amount">${portfolio.cash?.toFixed(2) || '0.00'}</span>
+            <span className="cash-amount">
+              ${portfolio.cash?.toFixed(2) || "0.00"}
+            </span>
           </div>
           <div className="summary-row">
             <span>Portfolio Value:</span>
-            <span className="portfolio-amount">${portfolio.portfolio_value?.toFixed(2) || '0.00'}</span>
+            <span className="portfolio-amount">
+              ${portfolio.portfolio_value?.toFixed(2) || "0.00"}
+            </span>
           </div>
           <div className="summary-row">
             <span>Total Value:</span>
-            <span className="total-amount">${portfolio.total_value?.toFixed(2) || '0.00'}</span>
+            <span className="total-amount">
+              ${portfolio.total_value?.toFixed(2) || "0.00"}
+            </span>
           </div>
           <div className="summary-row">
             <span>Total Return:</span>
-            <span className={`return-amount ${(portfolio.total_return || 0) >= 0 ? 'positive' : 'negative'}`}>
-              ${portfolio.total_return?.toFixed(2) || '0.00'} ({portfolio.total_return_percent?.toFixed(2) || '0.00'}%)
+            <span
+              className={`return-amount ${
+                (portfolio.total_return || 0) >= 0 ? "positive" : "negative"
+              }`}
+            >
+              ${portfolio.total_return?.toFixed(2) || "0.00"} (
+              {portfolio.total_return_percent?.toFixed(2) || "0.00"}%)
             </span>
           </div>
         </div>
@@ -198,19 +285,40 @@ function OrderForm() {
       {/* Stock Information */}
       {selectedStock && (
         <div className="stock-info">
-          <h3>{selectedStock.name} ({selectedStock.symbol})</h3>
+          <h3>
+            {selectedStock.name} ({selectedStock.symbol})
+          </h3>
           <div className="stock-details">
-            <div>Current Price: <strong>${selectedStock.price.toFixed(2)}</strong></div>
-            <div className={`price-change ${selectedStock.change >= 0 ? 'positive' : 'negative'}`}>
-              Change: {selectedStock.change >= 0 ? '+' : ''}${selectedStock.change?.toFixed(2)} 
-              ({selectedStock.change_percent?.toFixed(2)}%)
+            <div>
+              Current Price:{" "}
+              <strong>${selectedStock.price?.toFixed(2) || "0.00"}</strong>
+            </div>
+            <div
+              className={`price-change ${
+                (selectedStock.change || 0) >= 0 ? "positive" : "negative"
+              }`}
+            >
+              Change: {(selectedStock.change || 0) >= 0 ? "+" : ""}$
+              {selectedStock.change?.toFixed(2) || "0.00"}(
+              {selectedStock.change_percent?.toFixed(2)}%)
             </div>
             {currentHolding > 0 && (
               <div className="holding-info">
-                <div>Your Holdings: <strong>{currentHolding} shares</strong></div>
-                <div>Current Value: <strong>${currentValue.toFixed(2)}</strong></div>
-                <div className={`unrealized-pnl ${unrealizedPnL >= 0 ? 'positive' : 'negative'}`}>
-                  Unrealized P&L: <strong>{unrealizedPnL >= 0 ? '+' : ''}${unrealizedPnL.toFixed(2)}</strong>
+                <div>
+                  Your Holdings: <strong>{currentHolding} shares</strong>
+                </div>
+                <div>
+                  Current Value: <strong>${currentValue.toFixed(2)}</strong>
+                </div>
+                <div
+                  className={`unrealized-pnl ${
+                    unrealizedPnL >= 0 ? "positive" : "negative"
+                  }`}
+                >
+                  Unrealized P&L:{" "}
+                  <strong>
+                    {unrealizedPnL >= 0 ? "+" : ""}${unrealizedPnL.toFixed(2)}
+                  </strong>
                 </div>
               </div>
             )}
@@ -220,18 +328,26 @@ function OrderForm() {
 
       <form onSubmit={handleSubmit} className="order-form">
         <div className="form-row">
-          <label>Stock:
-            <select value={symbol} onChange={e => setSymbol(e.target.value)} required>
-              {stocks.map(s => (
-                <option key={s.symbol} value={s.symbol}>{s.symbol} - {s.name}</option>
+          <label>
+            Stock:
+            <select
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              required
+            >
+              {stocks.map((s) => (
+                <option key={s.symbol} value={s.symbol}>
+                  {s.symbol} - {s.name}
+                </option>
               ))}
             </select>
           </label>
         </div>
 
         <div className="form-row">
-          <label>Order Type:
-            <select value={side} onChange={e => setSide(e.target.value)}>
+          <label>
+            Order Type:
+            <select value={side} onChange={(e) => setSide(e.target.value)}>
               <option value="buy">Buy</option>
               <option value="sell">Sell</option>
             </select>
@@ -239,8 +355,12 @@ function OrderForm() {
         </div>
 
         <div className="form-row">
-          <label>Execution Type:
-            <select value={orderType} onChange={e => setOrderType(e.target.value)}>
+          <label>
+            Execution Type:
+            <select
+              value={orderType}
+              onChange={(e) => setOrderType(e.target.value)}
+            >
               <option value="market">Market Order (Execute Immediately)</option>
               <option value="limit">Limit Order (Specify Price)</option>
             </select>
@@ -248,38 +368,43 @@ function OrderForm() {
         </div>
 
         <div className="form-row">
-          <label>Quantity:
-            <input 
-              type="number" 
-              min="1" 
+          <label>
+            Quantity:
+            <input
+              type="number"
+              min="1"
               step="1"
-              max={side === 'sell' ? getMaxSellQuantity() : undefined}
-              value={quantity} 
-              onChange={e => setQuantity(e.target.value)} 
-              required 
+              max={side === "sell" ? getMaxSellQuantity() : undefined}
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              required
             />
           </label>
-          {side === 'sell' && (
+          {side === "sell" && (
             <small>Max available: {getMaxSellQuantity()} shares</small>
           )}
         </div>
 
         <div className="form-row">
-          <label>Price:
-            <input 
-              type="number" 
+          <label>
+            Price:
+            <input
+              type="number"
               step="0.01"
-              value={price.toFixed(2)} 
-              onChange={e => setPrice(parseFloat(e.target.value) || 0)}
-              readOnly={orderType === 'market'}
-              className={orderType === 'market' ? 'readonly-input' : ''}
+              value={price.toFixed(2)}
+              onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+              readOnly={orderType === "market"}
+              className={orderType === "market" ? "readonly-input" : ""}
             />
           </label>
-          {orderType === 'market' && (
+          {orderType === "market" && (
             <small>Market orders execute at current market price</small>
           )}
-          {orderType === 'limit' && (
-            <small>Limit orders execute only if market price reaches your specified price</small>
+          {orderType === "limit" && (
+            <small>
+              Limit orders execute only if market price reaches your specified
+              price
+            </small>
           )}
         </div>
 
@@ -288,7 +413,9 @@ function OrderForm() {
           <h4>Order Summary</h4>
           <div className="summary-line">
             <span>Action:</span>
-            <span>{side.toUpperCase()} {quantity} shares of {symbol}</span>
+            <span>
+              {side.toUpperCase()} {quantity} shares of {symbol}
+            </span>
           </div>
           <div className="summary-line">
             <span>Order Type:</span>
@@ -299,30 +426,38 @@ function OrderForm() {
             <span>${price.toFixed(2)} per share</span>
           </div>
           <div className="summary-line total">
-            <span>Estimated {side === 'buy' ? 'Cost' : 'Proceeds'}:</span>
+            <span>Estimated {side === "buy" ? "Cost" : "Proceeds"}:</span>
             <span>${estimatedCost.toFixed(2)}</span>
           </div>
-          {side === 'buy' && (
+          {side === "buy" && (
             <div className="summary-line">
               <span>Remaining Cash:</span>
-              <span className={portfolio.cash - estimatedCost >= 0 ? 'positive' : 'negative'}>
+              <span
+                className={
+                  portfolio.cash - estimatedCost >= 0 ? "positive" : "negative"
+                }
+              >
                 ${(portfolio.cash - estimatedCost).toFixed(2)}
               </span>
             </div>
           )}
         </div>
 
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           className={`order-btn ${side}-btn`}
           disabled={!!validateOrder()}
         >
-          {side === 'buy' ? 'Buy Shares' : 'Sell Shares'}
+          {side === "buy" ? "Buy Shares" : "Sell Shares"}
         </button>
       </form>
 
       {message && (
-        <div className={`order-message ${message.includes('successfully') ? 'success' : 'error'}`}>
+        <div
+          className={`order-message ${
+            message.includes("successfully") ? "success" : "error"
+          }`}
+        >
           {message}
         </div>
       )}
@@ -331,15 +466,15 @@ function OrderForm() {
       <div className="order-history-section">
         <div className="section-header">
           <h3>Recent Orders</h3>
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="toggle-btn"
             onClick={() => setShowOrderHistory(!showOrderHistory)}
           >
-            {showOrderHistory ? 'Hide' : 'Show'} Order History
+            {showOrderHistory ? "Hide" : "Show"} Order History
           </button>
         </div>
-        
+
         {showOrderHistory && (
           <div className="order-history">
             {orderHistory.length > 0 ? (
@@ -357,16 +492,22 @@ function OrderForm() {
                   <div key={order.id || index} className="table-row">
                     <div>{formatDateTime(order.timestamp)}</div>
                     <div>{order.symbol}</div>
-                    <div className={`side-${order.side}`}>{order.side.toUpperCase()}</div>
+                    <div className={`side-${order.side}`}>
+                      {order.side.toUpperCase()}
+                    </div>
                     <div>{order.quantity}</div>
                     <div>${order.price.toFixed(2)}</div>
                     <div>${(order.quantity * order.price).toFixed(2)}</div>
-                    <div className={`status-${order.status}`}>{order.status.toUpperCase()}</div>
+                    <div className={`status-${order.status}`}>
+                      {order.status.toUpperCase()}
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="no-orders">No orders found. Start trading to see your order history here.</div>
+              <div className="no-orders">
+                No orders found. Start trading to see your order history here.
+              </div>
             )}
           </div>
         )}

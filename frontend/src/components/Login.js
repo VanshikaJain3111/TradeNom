@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './AuthForm.css';
@@ -9,23 +9,29 @@ function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // Clear any existing user data when component mounts
-  useEffect(() => {
-    localStorage.removeItem('user');
-  }, []);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const params = new URLSearchParams();
-      params.append('username', email);
-      params.append('password', password);
-      const res = await api.post('/auth/login', params, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-      });
+      // Since we're using local storage mode, send JSON data
+      const loginData = {
+        username: email,
+        password: password
+      };
+      
+      const res = await api.post('/auth/login', loginData);
+      
+      // Clear any existing user data first
+      localStorage.removeItem('user');
+      
+      // Set new user data
       localStorage.setItem('user', JSON.stringify(res.data.user));
+      
+      console.log("Login successful, user:", res.data.user);
+      
+      // Use navigate instead of window.location for better React Router integration
       navigate('/dashboard');
     } catch (err) {
+      console.error("Login error:", err);
       setError('Invalid credentials');
     }
   };
@@ -34,6 +40,9 @@ function Login() {
     <div className="auth-bg">
       <div className="auth-card">
         <h2 className="auth-title">TradeNom Login</h2>
+        
+       
+
         <form onSubmit={handleSubmit} className="auth-form">
           <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="auth-input" />
           <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="auth-input" />

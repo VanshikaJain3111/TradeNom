@@ -5,7 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 MONGO_URL = "mongodb+srv://Divyanshi:Divyanshi@tradenom.stoe9lq.mongodb.net/"
 DB_NAME = "Divyanshi"
-DATA_DIR = "/Users/divyanshi/Desktop/TradeNom/data"
+DATA_DIR = "d:/Projects/ProjectTrade-main/ProjectTrade-main/data"
 
 async def load_csv_to_mongo():
     client = AsyncIOMotorClient(MONGO_URL)
