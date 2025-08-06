@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import api from "../services/api";
 import syntheticDataService from "../services/syntheticDataService";
+import SpreadDisplay from "./SpreadDisplay";
 import "./OrderForm.css";
 
 function OrderForm() {
@@ -246,42 +247,6 @@ function OrderForm() {
         </span>
       </h2>
 
-      {/* Portfolio Summary */}
-      <div className="portfolio-summary">
-        <div className="summary-card">
-          <h3>Portfolio Overview</h3>
-          <div className="summary-row">
-            <span>Available Cash:</span>
-            <span className="cash-amount">
-              ${portfolio.cash?.toFixed(2) || "0.00"}
-            </span>
-          </div>
-          <div className="summary-row">
-            <span>Portfolio Value:</span>
-            <span className="portfolio-amount">
-              ${portfolio.portfolio_value?.toFixed(2) || "0.00"}
-            </span>
-          </div>
-          <div className="summary-row">
-            <span>Total Value:</span>
-            <span className="total-amount">
-              ${portfolio.total_value?.toFixed(2) || "0.00"}
-            </span>
-          </div>
-          <div className="summary-row">
-            <span>Total Return:</span>
-            <span
-              className={`return-amount ${
-                (portfolio.total_return || 0) >= 0 ? "positive" : "negative"
-              }`}
-            >
-              ${portfolio.total_return?.toFixed(2) || "0.00"} (
-              {portfolio.total_return_percent?.toFixed(2) || "0.00"}%)
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Stock Information */}
       {selectedStock && (
         <div className="stock-info">
@@ -325,6 +290,9 @@ function OrderForm() {
           </div>
         </div>
       )}
+
+      {/* Real-time Spread Display */}
+      <SpreadDisplay symbol={symbol} className="compact" />
 
       <form onSubmit={handleSubmit} className="order-form">
         <div className="form-row">

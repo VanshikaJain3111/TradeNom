@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import api from "../services/api";
 import syntheticDataService from "../services/syntheticDataService";
+import SpreadDisplay from "./SpreadDisplay";
 import "./TestTrading.css";
 
 function TestTrading() {
@@ -659,6 +660,9 @@ function TestTrading() {
           )}
         </div>
       )}
+
+      {/* Real-time Spread Display */}
+      <SpreadDisplay symbol={symbol} className="compact" />
 
       {/* Test Trading Form */}
       <form onSubmit={handleSubmit} className="test-order-form">
