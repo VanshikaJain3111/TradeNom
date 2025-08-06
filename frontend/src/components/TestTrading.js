@@ -201,11 +201,19 @@ function TestTrading() {
 
   useEffect(() => {
     // Update price when symbol changes
-    const stock = stocks.find((s) => s.symbol === symbol);
-    if (stock) {
-      setPrice(stock.price);
+    if (symbol) {
+      const currentStock = currentPrices.find((p) => p.symbol === symbol);
+      if (currentStock && orderType === "market") {
+        setPrice(currentStock.price);
+      } else {
+        // Fallback to stocks data if currentPrices doesn't have the symbol yet
+        const stock = stocks.find((s) => s.symbol === symbol);
+        if (stock) {
+          setPrice(stock.price);
+        }
+      }
     }
-  }, [symbol, stocks]);
+  }, [symbol, orderType]); // Removed stocks from dependencies to prevent infinite loop
 
   const getHoldingQty = (sym) => {
     if (!testPortfolio || !testPortfolio.holdings) return 0;
