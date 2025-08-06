@@ -112,21 +112,21 @@ function PortfolioSummary() {
 
   return (
     <div className="portfolio-summary">
-      <h3>💼 Portfolio Summary</h3>
+      <h3>💼 Portfolio Dashboard</h3>
 
       <div className="summary-grid">
         <div className="summary-card total-value">
           <div className="card-header">
-            <h4>Total Portfolio Value</h4>
+            <h4>💰 Total Portfolio Value</h4>
           </div>
           <div className="card-value">{formatCurrency(getTotalValue())}</div>
           <div className="card-details">
             <div className="detail-row">
-              <span>Cash:</span>
+              <span>💵 Cash Available</span>
               <span>{formatCurrency(portfolio.cash)}</span>
             </div>
             <div className="detail-row">
-              <span>Investments:</span>
+              <span>📊 Investments</span>
               <span>{formatCurrency(portfolio.portfolio_value || 0)}</span>
             </div>
           </div>
@@ -134,7 +134,7 @@ function PortfolioSummary() {
 
         <div className="summary-card performance">
           <div className="card-header">
-            <h4>Performance</h4>
+            <h4>📈 Performance</h4>
           </div>
           <div
             className={`card-value ${
@@ -155,7 +155,7 @@ function PortfolioSummary() {
 
         <div className="summary-card allocation">
           <div className="card-header">
-            <h4>Asset Allocation</h4>
+            <h4>🎯 Asset Allocation</h4>
           </div>
           <div className="allocation-chart">
             <div
@@ -184,29 +184,29 @@ function PortfolioSummary() {
         {performance && (
           <div className="summary-card stats">
             <div className="card-header">
-              <h4>Trading Stats</h4>
+              <h4>📊 Trading Statistics</h4>
             </div>
             <div className="stats-grid">
               <div className="stat-item">
-                <span className="stat-label">Total Trades:</span>
+                <span className="stat-label">Total Trades</span>
                 <span className="stat-value">
                   {performance.total_trades || 0}
                 </span>
               </div>
               <div className="stat-item">
-                <span className="stat-label">Winning Trades:</span>
+                <span className="stat-label">Winning Trades</span>
                 <span className="stat-value positive">
                   {performance.winning_trades || 0}
                 </span>
               </div>
               <div className="stat-item">
-                <span className="stat-label">Total Volume:</span>
+                <span className="stat-label">Trading Volume</span>
                 <span className="stat-value">
                   {formatCurrency(performance.total_volume || 0)}
                 </span>
               </div>
               <div className="stat-item">
-                <span className="stat-label">Realized P&L:</span>
+                <span className="stat-label">Realized P&L</span>
                 <span
                   className={`stat-value ${
                     (performance.realized_pnl || 0) >= 0
@@ -260,7 +260,7 @@ function PortfolioSummary() {
           </div>
           {portfolio.holdings.length > 3 && (
             <div className="view-all-holdings">
-              +{portfolio.holdings.length - 3} more holdings
+              View all {portfolio.holdings.length} holdings →
             </div>
           )}
         </div>

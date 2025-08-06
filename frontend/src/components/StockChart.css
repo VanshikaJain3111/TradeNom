@@ -49,6 +49,67 @@
   color: #666;
 }
 
+/* Chart type controls */
+.chart-type-controls {
+  display: flex;
+  gap: 8px;
+  margin-right: 16px;
+}
+
+.chart-type-btn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background-color: #f8f9fa;
+  color: #333;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.chart-type-btn:hover {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.chart-type-btn.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.timeframe-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .chart-controls {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .chart-type-controls,
+  .timeframe-controls {
+    justify-content: center;
+  }
+  
+  .chart-type-btn,
+  .timeframe-btn {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 .error {
   color: #dc3545;
 }

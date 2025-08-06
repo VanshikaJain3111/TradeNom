@@ -32,33 +32,64 @@
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
 }
 
 .stat-card {
-  background: linear-gradient(135deg, #fafbfc 0%, #f8fafc 100%);
-  border: 1px solid #f1f3f4;
-  border-radius: 8px;
-  padding: 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  padding: 24px;
   text-align: center;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #e2e8f0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+  background: #3b82f6;
 }
 
 .stat-value {
-  font-size: 1.8em;
-  font-weight: bold;
+  font-size: 2.2em;
+  font-weight: 800;
   margin-bottom: 8px;
-  color: #4b5563;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  position: relative;
+  z-index: 2;
 }
 
 .stat-value.positive {
-  color: #16a34a;
+  color: #059669;
 }
 
 .stat-value.negative {
@@ -66,7 +97,7 @@
 }
 
 .stat-value.buy {
-  color: #1565c0;
+  color: #3b82f6;
 }
 
 .stat-value.sell {
@@ -74,11 +105,13 @@
 }
 
 .stat-label {
-  font-size: 0.9em;
-  color: #9ca3af;
-  font-weight: 500;
+  font-size: 0.85em;
+  color: #64748b;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  position: relative;
+  z-index: 2;
 }
 
 .no-trades {

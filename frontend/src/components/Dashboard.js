@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import Plot from 'react-plotly.js';
 import api from "../services/api";
 import syntheticDataService from "../services/syntheticDataService";
 import StockTicker from "./StockTicker";
@@ -24,6 +25,7 @@ function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState(null);
+  
   const newsIntervalRef = useRef(null);
   const priceUpdateUnsubscribe = useRef(null);
   const portfolioRefreshTimer = useRef(null);
@@ -260,9 +262,6 @@ function Dashboard() {
         maxSymbols={8}
       />
 
-      {/* Simulation Control */}
-      <SimulationControl />
-
       {/* Portfolio Summary */}
       <PortfolioSummary />
 
@@ -273,12 +272,6 @@ function Dashboard() {
       <LiveMarketData
         symbols={portfolio?.holdings?.map((h) => h.symbol) || []}
         maxSymbols={6}
-      />
-
-      {/* Live Stock Chart */}
-      <LiveStockChart
-        symbol={portfolio?.holdings?.[0]?.symbol || "AAPL"}
-        timeframe="1H"
       />
 
       <div className="dashboard-grid">
