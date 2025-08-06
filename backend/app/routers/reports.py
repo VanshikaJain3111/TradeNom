@@ -8,6 +8,7 @@ from pathlib import Path
 from fastapi.responses import StreamingResponse
 import io
 import csv
+from bson import ObjectId
 
 router = APIRouter()
 
@@ -34,6 +35,15 @@ def fix_objectid(doc):
         doc['id'] = str(doc['_id'])
         del doc['_id']
     return doc
+
+def get_user_by_id(user_id: str):
+    """Try to find user by both ObjectId and string formats"""
+    try:
+        # Try as ObjectId first
+        return db.users.find_one({"_id": ObjectId(user_id)})
+    except:
+        # If that fails, try as string
+        return db.users.find_one({"_id": user_id})
 
 @router.get("/user/{user_id}")
 async def get_reports(user_id: str):
@@ -78,7 +88,11 @@ async def get_trade_history_report(
                 date_filter["$gte"] = datetime.fromisoformat(start_date)
             if end_date:
                 date_filter["$lte"] = datetime.fromisoformat(end_date + "T23:59:59")
-            query["timestamp"] = date_filter
+            # Check both timestamp and created_at fields since orders might use either
+            query["$or"] = [
+                {"timestamp": date_filter},
+                {"created_at": date_filter}
+            ]
         
         # Add symbol filter
         if symbol:
@@ -96,6 +110,9 @@ async def get_trade_history_report(
             order = fix_objectid(order)
             trade_value = order['quantity'] * order['price']
             
+            # Get timestamp - check both possible fields
+            timestamp = order.get('timestamp') or order.get('created_at')
+            
             if order['side'] == 'buy':
                 total_buy_value += trade_value
             else:
@@ -103,7 +120,7 @@ async def get_trade_history_report(
             
             trade_history.append({
                 "id": order.get('id'),
-                "timestamp": order['timestamp'],
+                "timestamp": timestamp,
                 "symbol": order['symbol'],
                 "side": order['side'],
                 "quantity": order['quantity'],
@@ -137,7 +154,7 @@ async def get_portfolio_performance_report(user_id: str):
     """Generate comprehensive portfolio performance report"""
     try:
         # Get current portfolio
-        user = await db.users.find_one({"_id": user_id})
+        user = await get_user_by_id(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -248,23 +265,27 @@ async def get_pnl_statement(
         else:
             start_date = end_date - timedelta(days=30)  # Default to month
         
-        # Get orders in period
+        # Get orders in period - handle both timestamp and created_at fields
         orders = await db.orders.find({
             "user_id": user_id,
-            "timestamp": {"$gte": start_date, "$lte": end_date}
-        }).sort("timestamp", -1).to_list(1000)
+            "$or": [
+                {"timestamp": {"$gte": start_date, "$lte": end_date}},
+                {"created_at": {"$gte": start_date, "$lte": end_date}}
+            ]
+        }).to_list(1000)
         
         # Calculate realized P&L for the period
         realized_trades = []
         period_realized_pnl = 0.0
         buy_values = {}
         
-        # Get all orders to build cost basis
-        all_orders = await db.orders.find({"user_id": user_id}).sort("timestamp", 1).to_list(5000)
+        # Get all orders to build cost basis - handle both timestamp fields
+        all_orders = await db.orders.find({"user_id": user_id}).to_list(5000)
         
         for order in all_orders:
             symbol = order['symbol']
-            order_date = order['timestamp']
+            # Get order date - check both possible fields
+            order_date = order.get('timestamp') or order.get('created_at')
             
             if order['side'] == 'buy':
                 if symbol not in buy_values:
@@ -295,7 +316,7 @@ async def get_pnl_statement(
                     buy_values[symbol]['total_qty'] -= order['quantity']
         
         # Get current unrealized P&L
-        user = await db.users.find_one({"_id": user_id})
+        user = await get_user_by_id(user_id)
         holdings = user.get("holdings", []) if user else []
         
         unrealized_pnl = 0.0
@@ -320,6 +341,35 @@ async def get_pnl_statement(
         buy_volume = sum(o['quantity'] * o['price'] for o in period_orders if o['side'] == 'buy')
         sell_volume = sum(o['quantity'] * o['price'] for o in period_orders if o['side'] == 'sell')
         
+        # Create symbol breakdown for P&L
+        symbol_breakdown = []
+        symbol_pnl = {}
+        
+        # Add realized P&L by symbol
+        for trade in realized_trades:
+            symbol = trade['symbol']
+            if symbol not in symbol_pnl:
+                symbol_pnl[symbol] = {'realized_pnl': 0, 'unrealized_pnl': 0, 'trades_count': 0}
+            symbol_pnl[symbol]['realized_pnl'] += trade['pnl']
+            symbol_pnl[symbol]['trades_count'] += 1
+        
+        # Add unrealized P&L by symbol
+        for position in unrealized_positions:
+            symbol = position['symbol']
+            if symbol not in symbol_pnl:
+                symbol_pnl[symbol] = {'realized_pnl': 0, 'unrealized_pnl': 0, 'trades_count': 0}
+            symbol_pnl[symbol]['unrealized_pnl'] += position['unrealized_pnl']
+        
+        # Convert to list format
+        for symbol, pnl_data in symbol_pnl.items():
+            symbol_breakdown.append({
+                'symbol': symbol,
+                'realized_pnl': pnl_data['realized_pnl'],
+                'unrealized_pnl': pnl_data['unrealized_pnl'],
+                'total_pnl': pnl_data['realized_pnl'] + pnl_data['unrealized_pnl'],
+                'trades_count': pnl_data['trades_count']
+            })
+        
         pnl_statement = {
             "period": period,
             "start_date": start_date,
@@ -335,7 +385,8 @@ async def get_pnl_statement(
                 "net_flow": buy_volume - sell_volume
             },
             "realized_trades": realized_trades,
-            "unrealized_positions": unrealized_positions
+            "unrealized_positions": unrealized_positions,
+            "symbol_breakdown": symbol_breakdown
         }
         
         return pnl_statement
@@ -347,7 +398,7 @@ async def get_pnl_statement(
 async def export_trade_history_csv(user_id: str):
     """Export trade history as CSV"""
     try:
-        orders = await db.orders.find({"user_id": user_id}).sort("timestamp", -1).to_list(5000)
+        orders = await db.orders.find({"user_id": user_id}).to_list(5000)
         
         # Create CSV content
         output = io.StringIO()
@@ -360,18 +411,20 @@ async def export_trade_history_csv(user_id: str):
         
         # Data rows
         for order in orders:
-            timestamp = order['timestamp']
-            total_value = order['quantity'] * order['price']
-            writer.writerow([
-                timestamp.strftime('%Y-%m-%d'),
-                timestamp.strftime('%H:%M:%S'),
-                order['symbol'],
-                order['side'].upper(),
-                order['quantity'],
-                f"${order['price']:.2f}",
-                f"${total_value:.2f}",
-                order.get('status', 'filled').upper()
-            ])
+            # Get timestamp - check both possible fields
+            timestamp = order.get('timestamp') or order.get('created_at')
+            if timestamp:
+                total_value = order['quantity'] * order['price']
+                writer.writerow([
+                    timestamp.strftime('%Y-%m-%d'),
+                    timestamp.strftime('%H:%M:%S'),
+                    order['symbol'],
+                    order['side'].upper(),
+                    order['quantity'],
+                    f"${order['price']:.2f}",
+                    f"${total_value:.2f}",
+                    order.get('status', 'filled').upper()
+                ])
         
         output.seek(0)
         

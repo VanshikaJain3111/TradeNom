@@ -29,7 +29,7 @@ ChartJS.register(
   Filler
 );
 
-export default function PortfolioChart({ userId, period = '1M' }) {
+export default function PortfolioChart({ userId }) {
   const [portfolioHistory, setPortfolioHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,26 +38,19 @@ export default function PortfolioChart({ userId, period = '1M' }) {
     if (userId) {
       fetchPortfolioHistory();
     }
-  }, [userId, period]);
+  }, [userId]);
 
   const fetchPortfolioHistory = async () => {
     try {
       setLoading(true);
       setError('');
       
-      // Since we don't have historical portfolio data stored,
-      // we'll simulate it based on current portfolio and trade history
-      const [portfolioResponse, tradesResponse] = await Promise.all([
-        api.get(`/portfolio/${userId}`),
-        api.get(`/reports/trade-history/${userId}`)
-      ]);
-
+      // Fetch current portfolio data and generate simple history
+      const portfolioResponse = await api.get(`/portfolio/user/${userId}`);
       const currentPortfolio = portfolioResponse.data;
-      const trades = tradesResponse.data.trade_history;
 
-      // Generate simulated portfolio value over time
-      // This is a simplified simulation - in production, you'd store daily portfolio snapshots
-      const simulatedHistory = generatePortfolioHistory(currentPortfolio, trades, period);
+      // Generate simplified portfolio history for the last 30 days
+      const simulatedHistory = generateSimplePortfolioHistory(currentPortfolio);
       setPortfolioHistory(simulatedHistory);
       
     } catch (err) {
@@ -68,55 +61,31 @@ export default function PortfolioChart({ userId, period = '1M' }) {
     }
   };
 
-  const generatePortfolioHistory = (portfolio, trades, period) => {
+  const generateSimplePortfolioHistory = (portfolio) => {
     const endDate = new Date();
     const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30); // Last 30 days
     
-    // Calculate start date based on period
-    switch (period) {
-      case '1W':
-        startDate.setDate(endDate.getDate() - 7);
-        break;
-      case '1M':
-        startDate.setMonth(endDate.getMonth() - 1);
-        break;
-      case '3M':
-        startDate.setMonth(endDate.getMonth() - 3);
-        break;
-      case '6M':
-        startDate.setMonth(endDate.getMonth() - 6);
-        break;
-      case '1Y':
-        startDate.setFullYear(endDate.getFullYear() - 1);
-        break;
-      default:
-        startDate.setMonth(endDate.getMonth() - 1);
-    }
-
-    // Generate daily data points
     const history = [];
-    const currentDate = new Date(startDate);
     const currentValue = portfolio.total_value || 10000;
-    const startingValue = 10000;
+    const startingValue = 9500; // Assume portfolio started slightly lower
     
-    while (currentDate <= endDate) {
-      // Simulate portfolio value changes (simplified)
-      const daysSinceStart = (currentDate - startDate) / (1000 * 60 * 60 * 24);
-      const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
-      const progress = daysSinceStart / totalDays;
+    for (let i = 0; i <= 30; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
       
-      // Linear interpolation with some randomness
-      const randomFactor = 0.95 + Math.random() * 0.1; // ±5% randomness
-      const interpolatedValue = startingValue + (currentValue - startingValue) * progress * randomFactor;
+      // Simple linear progression with some variation
+      const progress = i / 30;
+      const baseValue = startingValue + (currentValue - startingValue) * progress;
+      const variation = (Math.random() - 0.5) * 200; // ±$100 random variation
+      const value = Math.max(baseValue + variation, 1000); // Minimum $1000
       
       history.push({
-        date: new Date(currentDate),
-        portfolioValue: interpolatedValue,
+        date: date,
+        portfolioValue: value,
         cash: portfolio.cash || 0,
-        investedValue: interpolatedValue - (portfolio.cash || 0)
+        investedValue: value - (portfolio.cash || 0)
       });
-      
-      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     return history;
@@ -156,7 +125,7 @@ export default function PortfolioChart({ userId, period = '1M' }) {
       },
       title: {
         display: true,
-        text: `Portfolio Performance - ${period}`,
+        text: 'Portfolio Performance (Last 30 Days)',
       },
       tooltip: {
         mode: 'index',
@@ -228,17 +197,6 @@ export default function PortfolioChart({ userId, period = '1M' }) {
 
   return (
     <div className="chart-container">
-      <div className="period-selector">
-        {['1W', '1M', '3M', '6M', '1Y'].map(p => (
-          <button
-            key={p}
-            className={`period-btn ${period === p ? 'active' : ''}`}
-            onClick={() => fetchPortfolioHistory(p)}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
       <div className="chart-wrapper">
         <Line data={chartData} options={options} />
       </div>
