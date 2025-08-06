@@ -28,6 +28,8 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirementsv1.txt
+pip install -r requirementsv2.txt
+
 ```
 
 #### Configure MongoDB
