@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './AuthForm.css';
@@ -8,6 +8,11 @@ function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  // Clear any existing user data when component mounts
+  useEffect(() => {
+    localStorage.removeItem('user');
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

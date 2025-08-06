@@ -10,10 +10,11 @@ import Reports from './components/Reports';
 import Analytics from './components/Analytics';
 import TestTrading from './components/TestTrading';
 import ReportsAnalytics from './pages/ReportsAnalytics';
+import KYCPending from './components/KYCPending';
 
 function PrivateRoute({ children }) {
   const user = localStorage.getItem('user');
-  return user ? children : <Navigate to="/" />;
+  return user ? children : <Navigate to="/login" />;
 }
 
 function App() {
@@ -24,7 +25,9 @@ function App() {
       <div style={{ padding: '30px' }}>
         <Routes>
           <Route path="/" element={isLoggedIn ? <Navigate to="/dashboard" /> : <Login />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/kyc-pending" element={<PrivateRoute><KYCPending /></PrivateRoute>} />
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/order" element={<PrivateRoute><OrderForm /></PrivateRoute>} />
           <Route path="/portfolio" element={<PrivateRoute><Portfolio /></PrivateRoute>} />
