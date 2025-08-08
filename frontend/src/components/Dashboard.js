@@ -12,10 +12,11 @@ import PortfolioSummary from "./PortfolioSummary";
 import SystemStatus from "./SystemStatus";
 import newsData from "../data/newsData.json";
 import "./Dashboard.css";
+import Navbar from "./Navbar";
 
-function Dashboard() {
-  const [portfolio, setPortfolio] = useState(null);
-  const [orders, setOrders] = useState([]);
+function Dashboard({ setPortfolio, setOrders }) {
+  const [portfolioData, setPortfolioData] = useState(null);
+  const [ordersData, setOrdersData] = useState([]);
   const [testTrades, setTestTrades] = useState([]);
   const [news, setNews] = useState([]);
   const [personalizedNews, setPersonalizedNews] = useState([]);
@@ -114,15 +115,15 @@ function Dashboard() {
       ]);
 
       setPortfolio(portfolioRes.data || null);
-      setOrders((ordersRes.data || []).slice(0, 5)); // Show latest 5 orders
-      setTestTrades((testRes.data || []).slice(0, 5)); // Show latest 5 test trades
+      setOrders((ordersRes.data || []).slice(0, 5));
+      setTestTrades((testRes.data || []).slice(0, 5));
       setNews(newsRes.data?.news || []);
 
       // Get current prices
       const prices = syntheticDataService.getAllCurrentPrices();
       setCurrentPrices(prices || []);
-    } catch (err) {
-      console.error("Error fetching data:", err);
+    } catch (error) {
+      console.error("Error fetching data:", error);
       setError("Error loading dashboard data");
 
       // Fallback to local news data
@@ -151,8 +152,8 @@ function Dashboard() {
 
   // Filter news for user's holdings
   useEffect(() => {
-    if (portfolio && portfolio.holdings && news.length > 0) {
-      const holdings = portfolio.holdings.map((h) => h.symbol?.toUpperCase());
+    if (portfolioData && portfolioData.holdings && news.length > 0) {
+      const holdings = portfolioData.holdings.map((h) => h.symbol?.toUpperCase());
       const relevantNews = news
         .filter((article) =>
           article.ticker_sentiment?.some((ticker) =>
@@ -162,7 +163,7 @@ function Dashboard() {
         .slice(0, 5);
       setPersonalizedNews(relevantNews);
     }
-  }, [portfolio, news]);
+  }, [portfolioData, news]);
 
   // News carousel effect
   useEffect(() => {
@@ -214,15 +215,15 @@ function Dashboard() {
   }
 
   const totalValue =
-    portfolio && portfolio.holdings
-      ? portfolio.holdings
+    portfolioData && portfolioData.holdings
+      ? portfolioData.holdings
           .reduce((sum, h) => sum + (h.market_value || 0), 0)
           .toFixed(2)
       : "0.00";
 
   const totalGainLoss =
-    portfolio && portfolio.holdings
-      ? portfolio.holdings
+    portfolioData && portfolioData.holdings
+      ? portfolioData.holdings
           .reduce(
             (sum, h) => sum + ((h.market_value || 0) - (h.cost_basis || 0)),
             0
@@ -250,7 +251,7 @@ function Dashboard() {
       {/* Stock Ticker */}
       <StockTicker
         selectedSymbols={
-          portfolio?.holdings?.map((h) => h.symbol) || [
+          portfolioData?.holdings?.map((h) => h.symbol) || [
             "AAPL",
             "MSFT",
             "GOOG",
@@ -270,7 +271,7 @@ function Dashboard() {
 
       {/* Live Market Data */}
       <LiveMarketData
-        symbols={portfolio?.holdings?.map((h) => h.symbol) || []}
+        symbols={portfolioData?.holdings?.map((h) => h.symbol) || []}
         maxSymbols={6}
       />
 
@@ -287,10 +288,10 @@ function Dashboard() {
             {parseFloat(totalGainLoss) >= 0 ? "+" : ""}${totalGainLoss} Total
             Gain/Loss
           </div>
-          {portfolio && portfolio.holdings && portfolio.holdings.length > 0 && (
+          {portfolioData && portfolioData.holdings && portfolioData.holdings.length > 0 && (
             <div className="holdings-summary">
               <h3>Top Holdings</h3>
-              {portfolio.holdings.slice(0, 3).map((holding, idx) => {
+              {portfolioData.holdings.slice(0, 3).map((holding, idx) => {
                 const currentPrice = currentPrices.find(
                   (p) => p.symbol === holding.symbol
                 );
@@ -331,9 +332,9 @@ function Dashboard() {
         {/* Recent Orders Section */}
         <div className="dashboard-card orders-section">
           <h2>Recent Orders</h2>
-          {orders.length > 0 ? (
+          {ordersData.length > 0 ? (
             <div className="orders-list">
-              {orders.map((order, idx) => (
+              {ordersData.map((order, idx) => (
                 <div key={idx} className="order-item">
                   <div className="order-info">
                     <span className="order-symbol">{order.symbol}</span>

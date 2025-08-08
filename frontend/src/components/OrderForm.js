@@ -4,6 +4,26 @@ import syntheticDataService from "../services/syntheticDataService";
 import SpreadDisplay from "./SpreadDisplay";
 import "./OrderForm.css";
 
+const SPREAD_PERCENT = 0.28;
+
+function getSpreadPrice(basePrice, side) {
+  const spread = basePrice * (SPREAD_PERCENT / 100);
+  return side === "buy"
+    ? basePrice + spread
+    : basePrice - spread;
+}
+
+function getSpreadValue(basePrice) {
+  return basePrice * (SPREAD_PERCENT / 100);
+}
+
+// Helper to get buy/sell prices with spread
+function getBuySellSpreadPrices(basePrice) {
+  const buyPrice = getSpreadPrice(basePrice, "buy");
+  const sellPrice = getSpreadPrice(basePrice, "sell");
+  return { buyPrice, sellPrice };
+}
+
 function OrderForm() {
   const [stocks, setStocks] = useState([]);
   const [portfolio, setPortfolio] = useState({
@@ -98,12 +118,12 @@ function OrderForm() {
   };
 
   useEffect(() => {
-    // Update price when symbol changes
+    // Update price when symbol or side changes
     const currentPrice = currentPrices.find((p) => p.symbol === symbol);
     if (currentPrice && orderType === "market") {
-      setPrice(currentPrice.price);
+      setPrice(getSpreadPrice(currentPrice.price, side));
     }
-  }, [symbol, currentPrices, orderType]);
+  }, [symbol, currentPrices, orderType, side]);
 
   useEffect(() => {
     // Calculate estimated cost
@@ -366,12 +386,19 @@ function OrderForm() {
             />
           </label>
           {orderType === "market" && (
-            <small>Market orders execute at current market price</small>
+            <small>
+              Market orders execute at current market price
+              <br />
+              {(() => {
+                const basePrice = currentPrices.find((p) => p.symbol === symbol)?.price || 0;
+                const { buyPrice, sellPrice } = getBuySellSpreadPrices(basePrice);
+                return `Spread: $${sellPrice.toFixed(4)} - $${buyPrice.toFixed(4)}`;
+              })()}
+            </small>
           )}
           {orderType === "limit" && (
             <small>
-              Limit orders execute only if market price reaches your specified
-              price
+              Limit orders execute only if market price reaches your specified price
             </small>
           )}
         </div>
@@ -391,7 +418,13 @@ function OrderForm() {
           </div>
           <div className="summary-line">
             <span>Price:</span>
-            <span>${price.toFixed(2)} per share</span>
+            <span>
+              ${price.toFixed(2)} per share
+              {orderType === "market" && (
+                <span style={{ color: '#888', marginLeft: 8 }}>
+                </span>
+              )}
+            </span>
           </div>
           <div className="summary-line total">
             <span>Estimated {side === "buy" ? "Cost" : "Proceeds"}:</span>

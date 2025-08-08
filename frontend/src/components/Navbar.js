@@ -2,7 +2,7 @@ import React from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
 
-function Navbar() {
+function Navbar({ portfolio, orders }) {
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -45,6 +45,9 @@ function Navbar() {
         </li>
         <li>
           <Link to="/test-trading">Test Trading</Link>
+        </li>
+        <li>
+          <Link to="/chatbot" state={{ portfolio, orders }}>ChatBot</Link>
         </li>
         <li>
           <button onClick={handleLogout} className="navbar-logout-btn">

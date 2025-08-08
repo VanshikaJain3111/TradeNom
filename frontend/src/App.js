@@ -16,6 +16,7 @@ import Analytics from "./components/Analytics";
 import TestTrading from "./components/TestTrading";
 import ReportsAnalytics from "./pages/ReportsAnalytics";
 import News from "./components/News";
+import ChatBotPage from "./pages/ChatBotPage";
 
 // Utility function to safely get user from localStorage
 const getSafeUser = () => {
@@ -76,9 +77,13 @@ function App() {
     }
   }, []);
 
+  // Track portfolio and orders globally for passing to Navbar
+  const [portfolio, setPortfolio] = useState(null);
+  const [orders, setOrders] = useState([]);
+
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <Navbar />
+      <Navbar portfolio={portfolio} orders={orders} />
       <div style={{ padding: "30px" }}>
         <Routes>
           <Route path="/" element={<Login />} />
@@ -87,7 +92,7 @@ function App() {
             path="/dashboard"
             element={
               <PrivateRoute>
-                <Dashboard />
+                <Dashboard setPortfolio={setPortfolio} setOrders={setOrders} />
               </PrivateRoute>
             }
           />
@@ -133,6 +138,14 @@ function App() {
           />
           <Route path="/reports-analytics" element={<ReportsAnalytics />} />
           <Route path="/news" element={<News />} />
+          <Route
+            path="/chatbot"
+            element={
+              <PrivateRoute>
+                <ChatBotPage />
+              </PrivateRoute>
+            }
+          />
         </Routes>
       </div>
     </Router>
